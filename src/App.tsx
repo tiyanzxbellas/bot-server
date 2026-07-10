@@ -103,7 +103,7 @@ export default function App() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [copiedText, setCopiedText] = useState<string | null>(null);
 
-  const logsEndRef = useRef<HTMLDivElement>(null);
+  const terminalRef = useRef<HTMLDivElement>(null);
 
   // Poll Bot Status and Logs
   useEffect(() => {
@@ -138,8 +138,8 @@ export default function App() {
 
   // Auto-scroll logs terminal
   useEffect(() => {
-    if (logsEndRef.current) {
-      logsEndRef.current.scrollIntoView({ behavior: "smooth" });
+    if (terminalRef.current) {
+      terminalRef.current.scrollTop = terminalRef.current.scrollHeight;
     }
   }, [logs]);
 
@@ -694,7 +694,7 @@ export default function App() {
                   </div>
 
                   {/* Console logs view */}
-                  <div className="flex-1 p-5 overflow-y-auto font-mono text-[11px] leading-relaxed text-slate-300 space-y-1.5 select-text selection:bg-emerald-500/30">
+                  <div ref={terminalRef} className="flex-1 p-5 overflow-y-auto font-mono text-[11px] leading-relaxed text-slate-300 space-y-1.5 select-text selection:bg-emerald-500/30">
                     {logs.length === 0 ? (
                       <div className="text-slate-600 h-full flex items-center justify-center italic">
                         --- Terminal is silent. Boot the bot to see logging output ---
@@ -706,7 +706,6 @@ export default function App() {
                         </div>
                       ))
                     )}
-                    <div ref={logsEndRef} />
                   </div>
 
                   {/* Raw Stdin CLI input */}
