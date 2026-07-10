@@ -1,0 +1,6 @@
+{
+  "name": "Experimental Bell Bot Dashboard",
+  "description": "A powerful web dashboard and control panel for the Experimental-Bell WhatsApp Bot.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
