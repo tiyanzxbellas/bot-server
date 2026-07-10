@@ -33,9 +33,21 @@ jobs:
 
       - name: Deploy static assets to Netlify
         uses: nwtgck/actions-netlify@v3.0
+        continue-on-error: true
         with:
           publish-dir: './dist'
           production-deploy: true
         env:
           NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
           NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
+
+      - name: Deploy to Vercel
+        uses: amondnet/vercel-action@v20
+        continue-on-error: true
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+          working-directory: ./
+          vercel-args: '--prod'
+

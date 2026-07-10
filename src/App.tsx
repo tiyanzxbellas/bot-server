@@ -1228,12 +1228,23 @@ jobs:
 
       - name: Deploy static assets to Netlify
         uses: nwtgck/actions-netlify@v3.0
+        continue-on-error: true
         with:
           publish-dir: './dist'
           production-deploy: true
         env:
           NETLIFY_AUTH_TOKEN: \${{ secrets.NETLIFY_AUTH_TOKEN }}
-          NETLIFY_SITE_ID: \${{ secrets.NETLIFY_SITE_ID }}`, "github")}
+          NETLIFY_SITE_ID: \${{ secrets.NETLIFY_SITE_ID }}
+
+      - name: Deploy to Vercel
+        uses: amondnet/vercel-action@v20
+        continue-on-error: true
+        with:
+          vercel-token: \${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: \${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: \${{ secrets.VERCEL_PROJECT_ID }}
+          working-directory: ./
+          vercel-args: '--prod'`, "github")}
                       className="text-[11px] font-mono text-slate-400 hover:text-white flex items-center space-x-1"
                     >
                       <Copy className="w-3.5 h-3.5" />
@@ -1241,7 +1252,7 @@ jobs:
                     </button>
                   </div>
                   <p className="text-xs text-slate-400 leading-normal">
-                    This complete GitHub Action workflow automates the CI/CD pipeline, building both the React dashboard UI and installing backend bot dependencies whenever you push to your <span className="font-mono text-white">main</span> branch.
+                    This complete GitHub Action workflow automates the CI/CD pipeline, building both the React dashboard UI and installing backend bot dependencies whenever you push to your <span className="font-mono text-white">main</span> branch. It supports automatic deployment to <span className="font-semibold text-white">both Netlify and Vercel</span> based on the secrets you configure.
                   </p>
                   <pre className="bg-slate-950 p-4 rounded-xl text-[10px] font-mono text-emerald-300/90 overflow-x-auto border border-slate-850">
 {`name: CI/CD Automatic Deployment
@@ -1279,12 +1290,23 @@ jobs:
 
       - name: Deploy static assets to Netlify
         uses: nwtgck/actions-netlify@v3.0
+        continue-on-error: true
         with:
           publish-dir: './dist'
           production-deploy: true
         env:
           NETLIFY_AUTH_TOKEN: \${{ secrets.NETLIFY_AUTH_TOKEN }}
-          NETLIFY_SITE_ID: \${{ secrets.NETLIFY_SITE_ID }}`}
+          NETLIFY_SITE_ID: \${{ secrets.NETLIFY_SITE_ID }}
+
+      - name: Deploy to Vercel
+        uses: amondnet/vercel-action@v20
+        continue-on-error: true
+        with:
+          vercel-token: \${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: \${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: \${{ secrets.VERCEL_PROJECT_ID }}
+          working-directory: ./
+          vercel-args: '--prod'`}
                   </pre>
                 </div>
               </motion.div>
