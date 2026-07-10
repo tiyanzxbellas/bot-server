@@ -26,7 +26,8 @@ import {
   ToggleLeft,
   ToggleRight,
   Send,
-  HelpCircle
+  HelpCircle,
+  Globe
 } from "lucide-react";
 
 interface BotStatus {
@@ -105,36 +106,52 @@ export default function App() {
 
   const terminalRef = useRef<HTMLDivElement>(null);
 
+  // Custom API base URL state for statically-hosted dashboards
+  const [apiBase, setApiBase] = useState(() => localStorage.getItem("bot_api_base") || "");
+
+  const apiFetch = (path: string, options?: RequestInit) => {
+    const cleanPath = path.startsWith("/") ? path : `/${path}`;
+    const url = apiBase ? `${apiBase.endsWith("/") ? apiBase.slice(0, -1) : apiBase}${cleanPath}` : cleanPath;
+    return fetch(url, options);
+  };
+
+  const fetchJson = async (path: string, options?: RequestInit) => {
+    const res = await apiFetch(path, options);
+    if (!res.ok) {
+      throw new Error(`HTTP error ${res.status}`);
+    }
+    const contentType = res.headers.get("content-type");
+    if (!contentType || !contentType.includes("application/json")) {
+      throw new Error("Response is not JSON. The static host likely returned an HTML 404 page.");
+    }
+    return res.json();
+  };
+
   // Poll Bot Status and Logs
   useEffect(() => {
     const fetchStatusAndLogs = async () => {
       try {
-        const statusRes = await fetch("/api/bot/status");
-        if (statusRes.ok) {
-          const statusData = await statusRes.json();
-          setStatus(statusData);
-        }
+        const statusData = await fetchJson("/api/bot/status");
+        setStatus(statusData);
 
-        const logsRes = await fetch("/api/bot/logs");
-        if (logsRes.ok) {
-          const logsData = await logsRes.json();
-          setLogs(logsData.logs);
-        }
-      } catch (e) {
-        console.error("Polling failed", e);
+        const logsData = await fetchJson("/api/bot/logs");
+        setLogs(logsData.logs);
+      } catch (e: any) {
+        // Log locally to console with warn to avoid visual noise/errors when offline/staticly loaded
+        console.warn("Polling background status failed:", e.message);
       }
     };
 
     fetchStatusAndLogs();
     const interval = setInterval(fetchStatusAndLogs, 1500);
     return () => clearInterval(interval);
-  }, []);
+  }, [apiBase]);
 
   // Fetch initial configuration & command lists
   useEffect(() => {
     fetchConfig();
     fetchCommands();
-  }, []);
+  }, [apiBase]);
 
   // Auto-scroll logs terminal
   useEffect(() => {
@@ -145,37 +162,33 @@ export default function App() {
 
   const fetchConfig = async () => {
     try {
-      const res = await fetch("/api/bot/config");
-      if (res.ok) {
-        const data: BotConfig = await res.json();
-        setConfig(data);
-        setBotname(data.botname || "");
-        setBotfullname(data.botfullname || "");
-        setBotnickname(data.botnickname || "");
-        setOwnername(data.ownername || "");
-        setSystemLogic(data.cfg?.logic || "");
-        setIsPublic(data.cfg?.public ?? true);
-        setAutotyping(data.cfg?.autotyping ?? false);
-        setAutoreadpc(data.cfg?.autoreadpc ?? false);
-        setAutoreadgc(data.cfg?.autoreadgc ?? false);
-        setReactswOn(data.cfg?.reactsw?.on ?? false);
-        setCallReject(data.cfg?.call?.reject ?? true);
-        setCallBlock(data.cfg?.call?.block ?? false);
-        setAntitagowner(data.cfg?.antitagowner ?? true);
-      }
-    } catch (e) {
-      showError("Failed to fetch bot configuration.");
+      const data: BotConfig = await fetchJson("/api/bot/config");
+      setConfig(data);
+      setBotname(data.botname || "");
+      setBotfullname(data.botfullname || "");
+      setBotnickname(data.botnickname || "");
+      setOwnername(data.ownername || "");
+      setSystemLogic(data.cfg?.logic || "");
+      setIsPublic(data.cfg?.public ?? true);
+      setAutotyping(data.cfg?.autotyping ?? false);
+      setAutoreadpc(data.cfg?.autoreadpc ?? false);
+      setAutoreadgc(data.cfg?.autoreadgc ?? false);
+      setReactswOn(data.cfg?.reactsw?.on ?? false);
+      setCallReject(data.cfg?.call?.reject ?? true);
+      setCallBlock(data.cfg?.call?.block ?? false);
+      setAntitagowner(data.cfg?.antitagowner ?? true);
+    } catch (e: any) {
+      console.warn("Failed to fetch bot configuration gracefully:", e.message);
     }
   };
 
   const fetchCommands = async () => {
     try {
-      const res = await fetch("/api/bot/commands");
-      if (res.ok) {
-        const data = await res.json();
-        setCommands(data.commands);
-      }
-    } catch (e) {}
+      const data = await fetchJson("/api/bot/commands");
+      setCommands(data.commands);
+    } catch (e: any) {
+      console.warn("Failed to fetch commands dynamically:", e.message);
+    }
   };
 
   const showSuccess = (msg: string) => {
@@ -198,15 +211,14 @@ export default function App() {
   const handleStartBot = async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/bot/start", { method: "POST" });
-      const data = await res.json();
+      const data = await fetchJson("/api/bot/start", { method: "POST" });
       if (data.success) {
         showSuccess("WhatsApp Bot process initialized successfully.");
       } else {
         showError(data.message || "Failed to start bot.");
       }
-    } catch (e) {
-      showError("Failed to make start request.");
+    } catch (e: any) {
+      showError(e.message.includes("not JSON") ? "Disconnected from backend server. Double check your API Server Connection Settings in the 'Host & Auto-Deploy' tab." : "Failed to make start request.");
     } finally {
       setLoading(false);
     }
@@ -215,16 +227,15 @@ export default function App() {
   const handleStopBot = async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/bot/stop", { method: "POST" });
-      const data = await res.json();
+      const data = await fetchJson("/api/bot/stop", { method: "POST" });
       if (data.success) {
         showSuccess("WhatsApp Bot process terminated.");
         setPairingMethod(null);
       } else {
         showError(data.message || "Failed to stop bot.");
       }
-    } catch (e) {
-      showError("Failed to make stop request.");
+    } catch (e: any) {
+      showError(e.message.includes("not JSON") ? "Disconnected from backend server. Double check your API Server Connection Settings in the 'Host & Auto-Deploy' tab." : "Failed to make stop request.");
     } finally {
       setLoading(false);
     }
@@ -235,7 +246,7 @@ export default function App() {
     if (!finalVal.trim()) return;
 
     try {
-      const res = await fetch("/api/bot/input", {
+      const res = await apiFetch("/api/bot/input", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text: finalVal })
@@ -252,16 +263,15 @@ export default function App() {
     if (confirm("Are you sure you want to delete the local session file? This will completely log out the bot and require re-pairing.")) {
       setLoading(true);
       try {
-        const res = await fetch("/api/bot/clear-session", { method: "POST" });
-        const data = await res.json();
+        const data = await fetchJson("/api/bot/clear-session", { method: "POST" });
         if (data.success) {
           showSuccess("Local WhatsApp session successfully cleared.");
           setPairingMethod(null);
         } else {
           showError(data.message || "Failed to clear session.");
         }
-      } catch (e) {
-        showError("Server request failed.");
+      } catch (e: any) {
+        showError(e.message.includes("not JSON") ? "Disconnected from backend server. Double check your API Server Connection Settings in the 'Host & Auto-Deploy' tab." : "Server request failed.");
       } finally {
         setLoading(false);
       }
@@ -291,20 +301,19 @@ export default function App() {
     };
 
     try {
-      const res = await fetch("/api/bot/config", {
+      const data = await fetchJson("/api/bot/config", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(updatedConfig)
       });
-      const data = await res.json();
       if (data.success) {
         showSuccess("Settings and AI logic saved successfully! Restart the bot to apply.");
         setConfig(updatedConfig);
       } else {
         showError("Failed to save settings.");
       }
-    } catch (e) {
-      showError("Connection failed when saving settings.");
+    } catch (e: any) {
+      showError(e.message.includes("not JSON") ? "Disconnected from backend server. Double check your API Server Connection Settings in the 'Host & Auto-Deploy' tab." : "Connection failed when saving settings.");
     } finally {
       setLoading(false);
     }
@@ -1048,6 +1057,47 @@ export default function App() {
                 exit={{ opacity: 0, y: -10 }}
                 className="space-y-6"
               >
+                {/* External API Base Configuration Card */}
+                <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4">
+                  <h3 className="text-sm font-semibold tracking-wider text-slate-200 uppercase flex items-center space-x-2">
+                    <Globe className="w-4 h-4 text-emerald-400 animate-pulse" />
+                    <span>Static Frontend - API Server Connection Settings</span>
+                  </h3>
+                  <p className="text-xs text-slate-400 leading-relaxed">
+                    If you host this dashboard statically on <span className="font-semibold text-white">Netlify</span> or <span className="font-semibold text-white">Vercel</span>, you must enter the URL of your active persistent backend bot daemon (e.g. your Koyeb container URL or VPS host) to control your bot remotely.
+                  </p>
+                  <div className="flex flex-col md:flex-row gap-3">
+                    <div className="flex-1">
+                      <input
+                        type="url"
+                        placeholder="e.g. https://my-bot-server.koyeb.app"
+                        value={apiBase}
+                        onChange={(e) => {
+                          setApiBase(e.target.value);
+                          localStorage.setItem("bot_api_base", e.target.value);
+                        }}
+                        className="w-full bg-slate-950 border border-slate-850 rounded-xl px-4 py-2.5 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-emerald-500"
+                      />
+                    </div>
+                    <button
+                      onClick={() => showSuccess("API Server URL saved locally! The dashboard is now connected.")}
+                      className="px-5 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-slate-950 text-xs font-semibold rounded-xl transition cursor-pointer"
+                    >
+                      Connect Backend
+                    </button>
+                  </div>
+                  {apiBase ? (
+                    <div className="text-[10px] text-emerald-400 font-mono flex items-center space-x-1.5 bg-emerald-500/5 px-3 py-1.5 rounded-lg border border-emerald-500/10">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+                      <span>Currently routing remote API requests to: <strong>{apiBase}</strong></span>
+                    </div>
+                  ) : (
+                    <div className="text-[10px] text-slate-500 font-mono bg-slate-950/60 px-3 py-1.5 rounded-lg border border-slate-900">
+                      <span>Currently routing local requests to relative origin paths (default full-stack mode)</span>
+                    </div>
+                  )}
+                </div>
+
                 {/* Intro Card */}
                 <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6">
                   <h2 className="text-lg font-semibold text-white flex items-center space-x-2">
@@ -1127,25 +1177,11 @@ export default function App() {
                     </div>
                     <button
                       onClick={() => triggerCopy(`{
-  "version": 2,
-  "builds": [
+  "cleanUrls": true,
+  "rewrites": [
     {
-      "src": "dist/server.cjs",
-      "use": "@vercel/node"
-    },
-    {
-      "src": "dist/**/*",
-      "use": "@vercel/static"
-    }
-  ],
-  "routes": [
-    {
-      "src": "/api/(.*)",
-      "dest": "dist/server.cjs"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/index.html"
+      "source": "/(.*)",
+      "destination": "/index.html"
     }
   ]
 }`, "vercel")}
@@ -1156,29 +1192,15 @@ export default function App() {
                     </button>
                   </div>
                   <p className="text-xs text-slate-400 leading-normal">
-                    This file translates our Express APIs and full-stack compiled output into Vercel Serverless Node Functions for quick backend proxies. Put this in your root folder.
+                    This file ensures Vercel serves the built React single page app (SPA) assets cleanly, routing all routes to <span className="font-mono text-white">index.html</span> so you don't get 404 errors. Put this in your root folder.
                   </p>
                   <pre className="bg-slate-950 p-4 rounded-xl text-[10px] font-mono text-emerald-300/90 overflow-x-auto border border-slate-850">
 {`{
-  "version": 2,
-  "builds": [
+  "cleanUrls": true,
+  "rewrites": [
     {
-      "src": "dist/server.cjs",
-      "use": "@vercel/node"
-    },
-    {
-      "src": "dist/**/*",
-      "use": "@vercel/static"
-    }
-  ],
-  "routes": [
-    {
-      "src": "/api/(.*)",
-      "dest": "dist/server.cjs"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/index.html"
+      "source": "/(.*)",
+      "destination": "/index.html"
     }
   ]
 }`}
