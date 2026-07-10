@@ -107,7 +107,18 @@ export default function App() {
   const terminalRef = useRef<HTMLDivElement>(null);
 
   // Custom API base URL state for statically-hosted dashboards
-  const [apiBase, setApiBase] = useState(() => localStorage.getItem("bot_api_base") || "");
+  const [apiBase, setApiBase] = useState(() => {
+    const saved = localStorage.getItem("bot_api_base");
+    if (saved !== null) return saved;
+    if (typeof window !== "undefined") {
+      const hostname = window.location.hostname;
+      // If we are hosted on an external platform like Vercel or Netlify, automatically default to the AI Studio container server!
+      if (hostname && !hostname.includes("run.app") && hostname !== "localhost" && hostname !== "127.0.0.1") {
+        return "https://ais-dev-sd7uocfechxi2fxsgs3xii-157059114479.asia-southeast1.run.app";
+      }
+    }
+    return "";
+  });
 
   const apiFetch = (path: string, options?: RequestInit) => {
     const cleanPath = path.startsWith("/") ? path : `/${path}`;
@@ -1059,12 +1070,36 @@ export default function App() {
               >
                 {/* External API Base Configuration Card */}
                 <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4">
-                  <h3 className="text-sm font-semibold tracking-wider text-slate-200 uppercase flex items-center space-x-2">
-                    <Globe className="w-4 h-4 text-emerald-400 animate-pulse" />
-                    <span>Static Frontend - API Server Connection Settings</span>
-                  </h3>
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-semibold tracking-wider text-slate-200 uppercase flex items-center space-x-2">
+                      <Globe className="w-4 h-4 text-emerald-400 animate-pulse" />
+                      <span>Static Frontend - API Server Connection Settings</span>
+                    </h3>
+                    <div className="flex space-x-2">
+                      <button
+                        onClick={() => {
+                          setApiBase("https://ais-dev-sd7uocfechxi2fxsgs3xii-157059114479.asia-southeast1.run.app");
+                          localStorage.setItem("bot_api_base", "https://ais-dev-sd7uocfechxi2fxsgs3xii-157059114479.asia-southeast1.run.app");
+                          showSuccess("Successfully connected to active AI Studio dev server!");
+                        }}
+                        className="px-2.5 py-1 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 text-[10px] font-semibold rounded-lg transition cursor-pointer"
+                      >
+                        ⚡ Use AI Studio Server
+                      </button>
+                      <button
+                        onClick={() => {
+                          setApiBase("");
+                          localStorage.removeItem("bot_api_base");
+                          showSuccess("Cleared connection back to default relative paths.");
+                        }}
+                        className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-[10px] font-semibold rounded-lg transition cursor-pointer"
+                      >
+                        Reset (Local)
+                      </button>
+                    </div>
+                  </div>
                   <p className="text-xs text-slate-400 leading-relaxed">
-                    If you host this dashboard statically on <span className="font-semibold text-white">Netlify</span> or <span className="font-semibold text-white">Vercel</span>, you must enter the URL of your active persistent backend bot daemon (e.g. your Koyeb container URL or VPS host) to control your bot remotely.
+                    If you host this dashboard statically on <span className="font-semibold text-white">Netlify</span> or <span className="font-semibold text-white">Vercel</span>, the front-end runs in the browser and needs a web URL to reach your active persistent WhatsApp backend bot. Enter the URL of your backend bot daemon (e.g., your active Koyeb container URL or the AI Studio container URL) to control your bot remotely.
                   </p>
                   <div className="flex flex-col md:flex-row gap-3">
                     <div className="flex-1">
@@ -1205,6 +1240,48 @@ export default function App() {
   ]
 }`}
                   </pre>
+                </div>
+
+                {/* Cara Isi Token Vercel & Secrets Guide */}
+                <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4">
+                  <div className="flex items-center space-x-2 text-white font-semibold">
+                    <Info className="w-5 h-5 text-emerald-400" />
+                    <span>Cara Isi Token Vercel &amp; Deployment Secrets di GitHub</span>
+                  </div>
+                  <p className="text-xs text-slate-400 leading-relaxed">
+                    Untuk menggunakan fitur Auto-Deploy di GitHub Actions, kamu harus mengisi 3 token rahasia (<span className="text-white font-semibold">Secrets</span>) di repository GitHub milikmu agar pipeline bisa mengunggah frontend secara otomatis:
+                  </p>
+                  <div className="space-y-3 pl-2">
+                    <div className="border-l-2 border-emerald-500/30 pl-3">
+                      <p className="text-xs text-white font-semibold font-mono">1. VERCEL_TOKEN</p>
+                      <p className="text-[11px] text-slate-400">
+                        Token akses pribadi dari akun Vercel kamu. Cara ambil: Masuk ke <span className="text-emerald-400">Vercel Dashboard</span> &rarr; <strong>Account Settings</strong> &rarr; <strong>Tokens</strong> &rarr; klik <strong>Create Token</strong> (beri akses penuh/scope global).
+                      </p>
+                    </div>
+                    <div className="border-l-2 border-emerald-500/30 pl-3">
+                      <p className="text-xs text-white font-semibold font-mono">2. VERCEL_ORG_ID</p>
+                      <p className="text-[11px] text-slate-400">
+                        ID dari akun personal atau organisasi Vercel kamu. Cara ambil: Buka terminal di project lokal lalu ketik <span className="font-mono text-emerald-300">npx vercel link</span>, atau buka file <span className="font-mono text-emerald-300">.vercel/project.json</span> setelah inisialisasi vercel CLI. Biasanya berupa nama username atau string unik.
+                      </p>
+                    </div>
+                    <div className="border-l-2 border-emerald-500/30 pl-3">
+                      <p className="text-xs text-white font-semibold font-mono">3. VERCEL_PROJECT_ID</p>
+                      <p className="text-[11px] text-slate-400">
+                        ID unik dari Project Vercel yang kamu buat. Cara ambil: Di <span className="font-mono text-emerald-300">.vercel/project.json</span> setelah link project, atau dari halaman <strong>Project Settings</strong> di Vercel dashboard.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="bg-slate-950 p-4 rounded-xl border border-slate-850 space-y-2">
+                    <p className="text-xs text-slate-300 font-semibold">Langkah Memasukkan Secret ke GitHub:</p>
+                    <ol className="list-decimal list-inside text-[11px] text-slate-400 space-y-1">
+                      <li>Buka halaman repository GitHub kamu di browser.</li>
+                      <li>Klik tab <span className="text-white font-semibold">Settings</span> di bagian atas.</li>
+                      <li>Di menu sebelah kiri, cari dan klik <span className="text-white font-semibold">Secrets and variables</span> &rarr; lalu klik <span className="text-white font-semibold">Actions</span>.</li>
+                      <li>Klik tombol hijau <span className="text-emerald-400 font-semibold">New repository secret</span>.</li>
+                      <li>Masukkan name (contoh: <span className="font-mono text-white">VERCEL_TOKEN</span>) dan isi value tokennya, lalu klik <span className="text-white font-semibold">Add secret</span>.</li>
+                      <li>Ulangi langkah di atas untuk <span className="font-mono text-white">VERCEL_ORG_ID</span> dan <span className="font-mono text-white">VERCEL_PROJECT_ID</span>.</li>
+                    </ol>
+                  </div>
                 </div>
 
                 {/* GitHub Actions Auto Deployment CI/CD */}
