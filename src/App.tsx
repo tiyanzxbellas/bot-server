@@ -1072,11 +1072,12 @@ export default function App() {
                     Because <span className="font-semibold text-white">Netlify Functions</span> and <span className="font-semibold text-white">Vercel Serverless Functions</span> are strictly stateless and terminate execution after 10-60 seconds, they <span className="font-semibold text-white">CANNOT</span> keep a permanent active WhatsApp bot running continuously.
                   </p>
                   <p className="font-semibold text-white">
-                    Recommended Architecture:
+                    Recommended Free Persistent Alternatives (No Render, No Railway):
                   </p>
                   <ul className="list-disc list-inside space-y-1 pl-2 text-[11px]">
-                    <li><span className="font-semibold text-slate-100">Frontend (Dashboard Panel):</span> Hosted statically on <span className="font-semibold text-emerald-400">Netlify</span> or <span className="font-semibold text-emerald-400">Vercel</span>.</li>
-                    <li><span className="font-semibold text-slate-100">Backend & Bot Daemon:</span> Hosted on a continuous server layer (like our active <span className="font-semibold text-emerald-400">Cloud Run container</span>, or a VPS / Railway instance) that runs 24/7.</li>
+                    <li><span className="font-semibold text-slate-100">Koyeb (Eco Free Tier):</span> Supports continuous running of Docker containers. Highly recommended for deploying this WhatsApp bot and dashboard 24/7 completely free. Uses the pre-configured <span className="font-semibold text-emerald-400">Dockerfile</span> we created.</li>
+                    <li><span className="font-semibold text-slate-100">Hugging Face Spaces (Docker SDK):</span> Completely free 24/7 hosting. You can create a new Docker Space, link your GitHub repository, and it will build and run automatically using the <span className="font-semibold text-emerald-400">Dockerfile</span>.</li>
+                    <li><span className="font-semibold text-slate-100">Local Machine / VPS:</span> Running natively via <span className="font-mono text-white">npm run build && npm start</span>.</li>
                   </ul>
                 </div>
 
